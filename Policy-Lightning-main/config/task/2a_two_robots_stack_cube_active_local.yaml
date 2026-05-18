@@ -1,0 +1,36 @@
+name: 2a_two_robots_stack_cube_active_local
+agent_num: 2
+
+image_shape: &image_shape [3, 240, 320]
+side_by_side_image_shape: &side_by_side_image_shape [3, 240, 640]  # 2 cameras side by side: 320 * 2 = 640 width
+action_shape: &action_shape [8]
+
+shape_meta: &shape_meta
+  # acceptable types: rgb, low_dim
+  obs:
+    head_cam:  # Stacked cameras from all agents: [num_cameras, C, H, W]
+      shape: *side_by_side_image_shape  # [3, 240, 640] for 2 cameras side by side
+      type: rgb
+    state:  # Each agent's own state
+      shape: *action_shape
+      type: low_dim
+  action:
+    shape: *action_shape
+
+dataset:
+  _target_: dataset.dataset2d.Dataset2D
+  dataset_path: /home/bingxing2/ailab/kangli/brunotemp/MAAP/Policy-Lightning-main/data/two_robots_stack_cube_active.h5
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  input_meta: 
+    obs:
+      head_cam_0: *image_shape
+      head_cam_1: *image_shape
+      state_0: *action_shape
+      state_1: *action_shape
+    action_0: *action_shape
+    action_1: *action_shape
+  seperate_action: True
+  use_mem: False
+  

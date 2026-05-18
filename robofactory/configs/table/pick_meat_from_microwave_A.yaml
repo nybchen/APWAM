@@ -1,0 +1,160 @@
+# Three robots task: Pick meat from microwave with active perception - Mode A
+# Robot 0: Active perception (look at the whole scene from top)
+# Robot 1: Open the microwave door
+# Robot 2: Pick meat and place to goal region
+# Mode A: Microwave at original position [0, 0., 0.26]
+task_name: PickMeatFromMicrowave
+scene:
+  name: Table
+  primitives:
+    - name: goal_region
+      builder: mani_skill.utils.building.actors.build_red_white_target
+      params:
+        radius: 0.11
+        thickness: 0.00005
+        name: goal_region
+        add_collision: False
+        body_type: kinematic
+        initial_pose:
+          p: [-0.5, 0., 0.001]
+      pos:
+        ppos:
+          p: [-0.5, 0., 0.001]
+          q: [0., 1.5707963268, 0.]
+        qpos: [0., 0.70710678, 0., 0.70710678]
+        randp_scale: [0.05, 0.05, 0.]
+        randq_scale: [0., 0., 0., 0.]
+
+    - name: microwave_platform
+      builder: mani_skill.utils.building.actors.build_cube
+      params:
+        half_size: 0.05
+        color: [0.5, 0.5, 0.5, 1]
+        name: microwave_platform
+        add_collision: True
+        body_type: static
+        initial_pose:
+          p: [0, 0., 0.1]
+      pos:
+        ppos:
+          p: [0, 0., 0.1]
+        qpos: [1., 0., 0., 0.]
+        randp_scale: [0., 0., 0.]
+        randq_scale: [0., 0., 0., 0.]
+
+  assets: 
+    - name: table
+      file_path: ${ASSET_DIR}/scenes/table/table.glb
+      collision:
+        type: box
+        pos:
+          p: [0, 0, 0.45982145]
+          half_size: [3.0225, 1.51125, 0.45982145]
+      pos: 
+        ppos:
+          p: [-0.12, 0., -0.9196429]
+          q: [0., 0., 1.5707963268]
+        randp_scale: [0., 0., 0.]
+        randq_scale: [0., 0., 0., 0.]
+      scale: [4.375, 4.375, 1.75]
+  env:
+    floor_width: 100
+    
+objects:
+  # Microwave with door (URDF) - Mode A: Original position
+  -
+    name: microwave
+    file_path: ${ASSET_DIR}/objects/microwave_annotated/mobility.urdf
+    annotation_path: ${ASSET_DIR}/objects/microwave_annotated/model_data.json
+    scale: 0.3
+    density: 1000
+    pos:
+      ppos:
+        p: [0, 0., 0.26]
+      qpos: [1., 0., 0., 0.]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+
+  -
+    name: meat
+    file_path: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+    annotation_path: ${ASSET_DIR}/objects/meat_annotated/model_data.json
+    material: 
+      type: sapien.pysapien.physx.PhysxMaterial
+      params:
+        static_friction: 0.5
+        dynamic_friction: 0.3
+        restitution: 0.
+    visual:
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.096, 0.48, 0.096] 
+    collision:
+      type: convex
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.096, 0.48, 0.096]
+    pos:
+    #Pose([-0.0635935, 0.00274156, 0.154809], [0.996525, 0.0528567, -0.0640831, 0.00610239])
+      ppos:
+        p: [-0.0635934, 0.00274156, 0.154809]
+      qpos: [0.996525, 0.0528567, -0.0640831, 0.00610239]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+    mass_params:
+      mass: 0.5
+      cmass_local_pose: [0., 0., 0.]
+      inertia: [0.1, 0.1, 0.1]
+agents:
+  # Robot 0: Active perception (top view of the scene)
+  -
+    robot_uid: panda_wristcam-0
+    pos:
+      ppos:
+        p: [-0.85, -0.1, 0.]
+        q: [0., 0., 0.]
+      qpos: [-2.0861368e-07, -0.4205907, 2.8179534e-07, -2.010518, 1.2369728e-06, 1.5899264, 0.78539896, 0.04, 0.04]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+  # Robot 1: Open door (front of microwave)
+  -
+    robot_uid: panda_wristcam-1
+    pos:
+      ppos:
+        p: [-0.5, -0.55, 0.]
+        q: [0., 0., 1.5707963268]
+      qpos: [-0.0032181283, -0.86738575, 0.0013588674, -2.229335, 0.0016000066, 1.3532126, 0.78275985, 0.04, 0.04]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+  # Robot 2: Pick meat and place to goal (right side of microwave)
+  -
+    robot_uid: panda_wristcam-2
+    pos:
+      ppos:
+        p: [-0.2, 0.55, 0.]
+        q: [0., 0., -1.5707963268]
+      qpos: [-0.002562661, -0.76160973, 0.0011821984, -2.1798525, 0.0013510957, 1.4094642, 0.78328234, 0.04, 0.03998662]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+cameras:
+  sensor:
+    - 
+      uid: head_camera_global
+      pose:
+        type: pose
+        params: [[-0.911214, 0.227032, 0.869824], [0.924582, 0.0618877, 0.334877, -0.17081]]
+      width: 320
+      height: 240
+      fov: 1.5707963268
+      near: 0.01
+      far: 10
+  human_render:
+    - 
+      uid: render_camera
+      pose:
+        type: look_at
+        params: [[1.2, 0.8, 0.8], [0., 0., 0.2]]
+      width: 512
+      height: 512
+      fov: 1
+      near: 0.01
+      far: 100

@@ -1,0 +1,36 @@
+# Place cube on cart: all agents use camera of agent 0 (observation agent)
+name: place_cube_on_cart_local_single_cam
+agent_num: 2
+
+camera_assignment: [0, 0]
+
+image_shape: &image_shape [3, 240, 320]
+action_shape: &action_shape [8]
+
+shape_meta: &shape_meta
+  obs:
+    head_cam:
+      shape: *image_shape
+      type: rgb
+    state:
+      shape: *action_shape
+      type: low_dim
+  action:
+    shape: *action_shape
+
+dataset:
+  _target_: dataset.dataset2d.Dataset2D
+  dataset_path: /home/nybchen/MARS/MAAP/Policy-Lightning-main/data/place_cube_on_cart.h5
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  input_meta:
+    obs:
+      head_cam_0: *image_shape
+      head_cam_1: *image_shape
+      state_0: *action_shape
+      state_1: *action_shape
+    action_0: *action_shape
+    action_1: *action_shape
+  seperate_action: True
+  use_mem: False

@@ -1,0 +1,78 @@
+# compilation and distribution
+__pycache__
+robofactory/assets/*
+robofactory/demos/
+assets/*
+robofactory/demos
+robofactory/data
+robofactory/eval_video
+robofactory/checkpoints
+
+docs/
+_ext
+*.pyc
+*.so
+build/
+dist/
+*.egg-info/
+
+# ipython/jupyter notebooks
+# *.ipynb
+**/.ipynb_checkpoints/
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+*.log
+
+# MacOS
+*.DS_Store
+
+# Pycharm editor settings
+.idea
+
+# VSCode editor settings
+.vscode
+
+# project-relevant
+imgui.ini
+
+# directories that should be ignored in general
+# but can be excluded explicitly
+/tmp
+/data
+/demos
+/videos
+/examples/benchmarking/videos
+/assets/*
+/testvideo
+
+# benchmarking
+/benchmark_results
+/mani_skill/examples/benchmarking/benchmark_results
+/mani_skill/examples/benchmarking/videos
+# testing
+.coverage*
+htmlcov/
+
+!robofactory/assets/.gitkeep
+
+# Policy-Lightning-main
+Policy-Lightning-main/data
+Policy-Lightning-main/outputs
+Policy-Lightning-main/__pycache__
+Policy-Lightning-main/.vscode
+
+outputs/
+
+eval_video/
+eval_video/*
+
+# slurm
+*.out
+*.out_perf
+
+# checkpoints
+*.ckpt

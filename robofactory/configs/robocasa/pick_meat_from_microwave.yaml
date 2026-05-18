@@ -1,0 +1,145 @@
+# Three robots task: Pick meat from microwave with active perception (RoboCasa)
+# Robot 0: Active perception (look at the whole scene from top)
+# Robot 1: Open the microwave door
+# Robot 2: Pick meat and place to goal region
+# 180° rotated + 0.8 x shift; microwave qpos flipped 180° so door faces correct way
+task_name: PickMeatFromMicrowaveRobocasa
+scene:
+  name: Robocasa
+  env:
+    scene_idx: 0
+    layout_idx: 3  # 0-9
+    style_idx: 3  # 0-11
+    customized_layout: ${CONFIG_DIR}/robocasa/customized_layout.yaml
+  primitives:
+    - name: goal_region
+      builder: mani_skill.utils.building.actors.build_red_white_target
+      params:
+        radius: 0.11
+        thickness: 0.00005
+        name: goal_region
+        add_collision: False
+        body_type: kinematic
+        initial_pose:
+          p: [2.65, -3.45, 0.921]
+      pos:
+        ppos:
+          p: [2.65, -3.45, 0.921]
+          q: [0., 1.5707963268, 0.]
+        qpos: [0., 0.70710678, 0., 0.70710678]
+        randp_scale: [0.05, 0.05, 0.]
+        randq_scale: [0., 0., 0., 0.]
+
+    - name: microwave_platform
+      builder: mani_skill.utils.building.actors.build_cube
+      params:
+        half_size: 0.05
+        color: [0.5, 0.5, 0.5, 1]
+        name: microwave_platform
+        add_collision: True
+        body_type: static
+        initial_pose:
+          p: [2.15, -3.45, 1.02]
+      pos:
+        ppos:
+          p: [2.15, -3.45, 1.02]
+        qpos: [1., 0., 0., 0.]
+        randp_scale: [0., 0., 0.]
+        randq_scale: [0., 0., 0., 0.]
+
+objects:
+  - name: microwave
+    file_path: ${ASSET_DIR}/objects/microwave_annotated/mobility.urdf
+    annotation_path: ${ASSET_DIR}/objects/microwave_annotated/model_data.json
+    scale: 0.3
+    density: 1000
+    pos:
+      ppos:
+        p: [2.15, -3.45, 1.18]
+      qpos: [0., 0., 0., 1.]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+
+  - name: meat
+    file_path: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+    annotation_path: ${ASSET_DIR}/objects/meat_annotated/model_data.json
+    material:
+      type: sapien.pysapien.physx.PhysxMaterial
+      params:
+        static_friction: 0.5
+        dynamic_friction: 0.3
+        restitution: 0.
+    visual:
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.096, 0.48, 0.096]
+    collision:
+      type: convex
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.096, 0.48, 0.096]
+    pos:
+      ppos:
+        p: [2.213593, -3.452742, 1.074809]
+      qpos: [-0.00610239, 0.0640831, 0.0528567, 0.996525]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+    mass_params:
+      mass: 0.5
+      cmass_local_pose: [0., 0., 0.]
+      inertia: [0.1, 0.1, 0.1]
+
+agents:
+  - robot_uid: panda_wristcam-0
+    pos:
+      ppos:
+        p: [3.0, -3.35, 0.92]
+        q: [0., 0., 3.1415926536]
+      qpos: [-2.0861368e-07, -0.4205907, 2.8179534e-07, -2.010518, 1.2369728e-06, 1.5899264, 0.78539896, 0.04, 0.04]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+  - robot_uid: panda_wristcam-1
+    pos:
+      ppos:
+        p: [2.65, -2.9, 0.92]
+        q: [0., 0., -1.5707963268]
+      qpos: [-0.0032181283, -0.86738575, 0.0013588674, -2.229335, 0.0016000066, 1.3532126, 0.78275985, 0.04, 0.04]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+  - robot_uid: panda_wristcam-2
+    pos:
+      ppos:
+        p: [2.35, -4.0, 0.92]
+        q: [0., 0., 1.5707963268]
+      qpos: [-0.002562661, -0.76160973, 0.0011821984, -2.1798525, 0.0013510957, 1.4094642, 0.78328234, 0.04, 0.03998662]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+cameras:
+  sensor:
+    - uid: head_camera_global 
+      pose: 
+        type: pose
+        params: [[3.061214, -3.677032, 1.789824], [0.17081, -0.334877, 0.0618877, 0.924582]]
+      width: 480
+      height: 320
+      fov: 1.5707963268
+      near: 0.01
+      far: 10
+    - uid: head_camera_screenshot
+      pose:
+        type: pose
+        params: [[3.55426, -4.05752, 1.94027], [0.307463, -0.248239, 0.0835079, 0.914806]]
+      width: 1920
+      height: 1080
+      fov: 1.5707963268
+      near: 0.1
+      far: 1000
+  human_render:
+    - uid: render_camera
+      pose:
+        type: look_at
+        params: [[0.95, -4.25, 1.72], [2.15, -3.45, 1.12]]
+      width: 512
+      height: 512
+      fov: 1
+      near: 0.01
+      far: 100

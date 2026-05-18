@@ -1,0 +1,149 @@
+ # Two robots task: Place cube on cart
+ # Robot 0: Active perception (top-view observer)
+ # Robot 1: Manipulator that picks the cube from the table and places it on the cart
+ task_name: PlaceCubeOnCart
+ scene:
+   name: Table
+   primitives:
+     # Visual goal region on top of the cart
+     - name: goal_region_cart
+       builder: mani_skill.utils.building.actors.build_red_white_target
+       params:
+         radius: 0.08
+         thickness: 0.00005
+         name: goal_region_cart
+         add_collision: False
+         body_type: kinematic
+         initial_pose:
+           # Roughly above the cart center; tune as needed
+           p: [-0.0449032, 0.117664, 0.289327]
+       pos:
+         ppos:
+           p: [-0.0449032, 0.117664, 0.289327]
+         q: [0., 1.5707963268, 0.]
+         qpos: [0.707107, -2.96952e-07, -0.707107, -4.02224e-08]
+         randp_scale: [0.02, 0.02, 0.]
+         randq_scale: [0., 0., 0., 0.]
+
+     # Cube initially on the table
+     - name: cube
+       builder: mani_skill.utils.building.actors.build_cube
+       params:
+         half_size: 0.02
+         color: [0.04705882, 0.16470588, 0.62745098, 1.]
+         name: cube
+         add_collision: True
+         initial_pose:
+           # On table surface; adjust as needed
+           p: [0.0, -0.25, 0.17]
+       pos:
+         ppos:
+           p: [0.0, -0.25, 0.17]
+         qpos: [1., 0., 0., 0.]
+         randp_scale: [0.02, 0.02, 0.]
+         randq_scale: [0., 0., 0., 0.]
+
+   assets: 
+     - name: table
+       file_path: ${ASSET_DIR}/scenes/table/table.glb
+       collision:
+         type: box
+         pos:
+           p: [0, 0, 0.45982145]
+           half_size: [3.0225, 1.51125, 0.45982145]
+       pos: 
+         ppos:
+           p: [-0.12, 0., -0.9196429]
+           q: [0., 0., 1.5707963268]
+         randp_scale: [0., 0., 0.]
+         randq_scale: [0., 0., 0., 0.]
+       scale: [4.375, 4.375, 1.75]
+   env:
+     floor_width: 100
+     
+ objects:
+   # Cart on the table; cube should be placed onto it
+   -
+     name: cart
+     file_path: ${ASSET_DIR}/objects/cart_annotated/mobility.urdf
+     annotation_path: ${ASSET_DIR}/objects/cart_annotated/model_data.json
+     scale: 0.3
+     density: 1000
+     pos:
+       ppos:
+         # On table, roughly in front of the manipulator
+         p: [-0.0711081, 0.144645, 0.256102]
+       qpos: [-2.98023e-08, 0, -2.98023e-08, -1]
+       randp_scale: [0., 0., 0.]
+       randq_scale: [0., 0., 0., 0.]
+
+ agents:
+   # Robot 0: Active perception (top view of the scene)
+   -
+     robot_uid: panda_wristcam-0
+     pos:
+       ppos:
+         p: [-0.7, 0., 0.]
+         q: [0., 0., 0.]
+       qpos: [-2.0861368e-07, -0.4205907, 2.8179534e-07, -2.010518, 1.2369728e-06, 1.5899264, 0.78539896, 0.04, 0.04]
+       randp_scale: [0., 0., 0.]
+       randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+   # Robot 1: Manipulator that picks cube and places it on cart
+   -
+     robot_uid: panda_wristcam-1
+     pos:
+       ppos:
+         # In front of cube and cart
+         p: [-0.3, -0.55, 0.]
+         q: [0., 0., 1.5707963268]
+       qpos: [-0.0032181283, -0.86738575, 0.0013588674, -2.229335, 0.0016000066, 1.3532126, 0.78275985, 0.04, 0.04]
+       randp_scale: [0., 0., 0.]
+       randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+ cameras:
+    sensor:
+    # - 
+    #   uid: head_camera_agent0
+    #   pose:
+    #     type: look_at
+    #     params: [[-0.5, 0.115, 0.4], [0, -0.235, 0.1]]
+    #   width: 320
+    #   height: 240
+    #   fov: 1.5707963268
+    #   near: 0.01
+    #   far: 10
+    # - 
+    #   uid: head_camera_agent1
+    #   pose:
+    #     type: look_at
+    #     params: [[0.5, -0.115, 0.4], [0, 0.235, 0.1]]
+    #   width: 320
+    #   height: 240
+    #   fov: 1.5707963268
+    #   near: 0.01
+#     #   far: 10
+#     camera = add_camera(name="", width=1920, height=1080, fovy=1.57, near=0.1, far=1e+03)
+# camera.set_local_pose(Pose([0.453538, -0.482309, 0.770908], [0.293164, -0.184901, 0.057941, 0.936221]))
+      - 
+        uid: head_camera_global
+        pose:
+          type: pose
+          params: [[0.453538, -0.482309, 0.770908], [0.293164, -0.184901, 0.057941, 0.936221]]
+        width: 320
+        height: 240
+        fov: 1.5707963268
+        near: 0.01
+        far: 10
+    human_render:
+      - 
+        uid: render_camera
+        pose:
+          type: look_at
+          params: [[1.2, 0.8, 0.8], [0., 0., 0.2]]
+        width: 512
+        height: 512
+        fov: 1
+        near: 0.01
+        far: 100
+

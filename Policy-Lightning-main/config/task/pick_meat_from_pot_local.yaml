@@ -1,0 +1,35 @@
+# Pick meat from pot: each agent sees all agents' cameras (local_dp2)
+name: pick_meat_from_pot_local
+agent_num: 2
+
+image_shape: &image_shape [3, 240, 320]
+side_by_side_image_shape: &side_by_side_image_shape [3, 240, 640]
+action_shape: &action_shape [8]
+
+shape_meta: &shape_meta
+  obs:
+    head_cam:
+      shape: *side_by_side_image_shape
+      type: rgb
+    state:
+      shape: *action_shape
+      type: low_dim
+  action:
+    shape: *action_shape
+
+dataset:
+  _target_: dataset.dataset2d.Dataset2D
+  dataset_path: /home/nybchen/MARS/MAAP/Policy-Lightning-main/data/pick_meat_from_pot.h5
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  input_meta:
+    obs:
+      head_cam_0: *image_shape
+      head_cam_1: *image_shape
+      state_0: *action_shape
+      state_1: *action_shape
+    action_0: *action_shape
+    action_1: *action_shape
+  seperate_action: True
+  use_mem: False

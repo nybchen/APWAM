@@ -1,0 +1,152 @@
+# Two robots task: Pick meat from pot with active perception
+# Robot 0: Active perception (look inside the pot with wrist camera)
+# Robot 1: Pick meat and place to goal region
+task_name: PickMeatFromPot
+scene:
+  name: Table
+  primitives:
+    - name: goal_region
+      builder: mani_skill.utils.building.actors.build_red_white_target
+      params:
+        radius: 0.11
+        thickness: 0.00005
+        name: goal_region
+        add_collision: False
+        body_type: kinematic
+        initial_pose:
+          p: [0.3, 0., 0.001]
+      pos:
+        ppos:
+          p: [0.3, 0., 0.001]
+          q: [0., 1.5707963268, 0.]
+        qpos: [0., 0.70710678, 0., 0.70710678]
+        randp_scale: [0.05, 0.05, 0.]
+        randq_scale: [0., 0., 0., 0.]
+
+  assets: 
+    - name: table
+      file_path: ${ASSET_DIR}/scenes/table/table.glb
+      collision:
+        type: box
+        pos:
+          p: [0, 0, 0.45982145]
+          half_size: [3.0225, 1.51125, 0.45982145]
+      pos: 
+        ppos:
+          p: [-0.12, 0., -0.9196429]
+          q: [0., 0., 1.5707963268]
+        randp_scale: [0., 0., 0.]
+        randq_scale: [0., 0., 0., 0.]
+      scale: [4.375, 4.375, 1.75]
+  env:
+    floor_width: 100
+    
+objects:
+  # Pot body - stationary container
+  -
+    name: pot_body
+    file_path: ${ASSET_DIR}/objects/pot_body_annotated/pot_body.obj
+    annotation_path: ${ASSET_DIR}/objects/pot_body_annotated/model_data.json
+    scale: 0.18
+    density: 1  
+    material:
+      type: sapien.pysapien.physx.PhysxMaterial
+      params:
+        static_friction: 0.3
+        dynamic_friction: 0.3
+        restitution: 0.
+    visual:
+      filename: ${ASSET_DIR}/objects/pot_body_annotated/pot_body.obj
+      scale: [0.18, 0.18, 0.18]
+    collision:
+      type: nonconvex
+      filename: ${ASSET_DIR}/objects/pot_body_annotated/pot_body.obj
+      scale: [0.18, 0.18, 0.18]
+    pos:
+      ppos:
+        p: [0, 0., 0.12]
+      qpos: [0.70710678, 0.70710678, 0., 0.]
+      randp_scale: [0.0, 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+    mass_params:
+      mass: 100000.0
+      cmass_local_pose: [0., 0., 0.]
+      inertia: [10000, 10000, 10000]
+
+  # Meat inside the pot
+  -
+    name: meat
+    file_path: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+    annotation_path: ${ASSET_DIR}/objects/meat_annotated/model_data.json
+    material: 
+      type: sapien.pysapien.physx.PhysxMaterial
+      params:
+        static_friction: 0.5
+        dynamic_friction: 0.3
+        restitution: 0.
+    visual:
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.08, 0.4, 0.08]
+    collision:
+      type: convex
+      filename: ${ASSET_DIR}/objects/meat_annotated/textured.obj
+      scale: [0.08, 0.4, 0.08]
+    pos:
+      ppos:
+        p: [0, 0.0, 0.04]
+      qpos: [0.733, 0.082, -0.011, 0.675]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0.]
+    mass_params:
+      mass: 0.5
+      cmass_local_pose: [0., 0., 0.]
+      inertia: [0.1, 0.1, 0.1]
+
+agents:
+  # Robot 0: Active perception (left side of pot, look into pot)
+  -
+    robot_uid: panda_wristcam-0
+    pos:
+      ppos:
+        p: [0., -0.4, 0.]
+        q: [0., 0., 1.5707963268]
+      qpos: [0.010103039, -1.4191381, 0.16304587, -2.7187662, 0.013969563, 1.6680584, 0.91751826, 0.03999836, 0.039999664]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+  # Robot 1: Pick meat and place to goal (right side of pot)
+  -
+    robot_uid: panda_wristcam-1
+    pos:
+      ppos:
+        p: [0., 0.4, 0.]
+        q: [0., 0., -1.5707963268]
+      qpos: [0.20677531, -1.4884565, -0.0248626, -2.566926, -0.070899144, 1.291728, -2.1000953, 0.04, 0.04]
+      randp_scale: [0., 0., 0.]
+      randq_scale: [0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+cameras:
+  sensor:
+  # camera = add_camera(name="", width=1920, height=1080, fovy=1.57, near=0.1, far=1e+03)
+# camera.set_local_pose(Pose([0.6375, -0.0300734, 0.725716], [0.00819027, -0.283546, 0.00236773, 0.958921]))
+    - 
+      uid: head_camera_global
+      pose:
+        type: pose
+        params: [[0.6375, -0.0300734, 0.725716], [0.00819027, -0.283546, 0.00236773, 0.958921]]
+      width: 320
+      height: 240
+      fov: 1.5707963268
+      near: 0.01
+      far: 10
+
+  human_render:
+    - 
+      uid: render_camera
+      pose:
+        type: look_at
+        params: [[1.2, 0.8, 0.8], [0., 0., 0.2]]
+      width: 512
+      height: 512
+      fov: 1
+      near: 0.01
+      far: 100
