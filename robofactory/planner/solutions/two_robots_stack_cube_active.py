@@ -10,7 +10,7 @@ def solve(env: TwoRobotsStackCubeActiveEnv, seed=101, debug=False, vis=False):
         env,
         debug=debug,
         vis=vis,
-        base_pose=[agent.robot.pose for agent in env.agent.agents],
+        base_pose=[agent.robot.pose for agent in env.unwrapped.agent.agents],
         visualize_target_grasp_pose=vis,
         print_env_info=False,
         is_multi_agent=True

@@ -8,6 +8,8 @@ robofactory/data
 robofactory/eval_video
 robofactory/checkpoints
 
+lingbot-va/*.pyc
+
 docs/
 _ext
 *.pyc
