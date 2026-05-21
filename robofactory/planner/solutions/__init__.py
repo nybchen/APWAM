@@ -6,6 +6,10 @@ from .place_food import solve as solvePlaceFood
 from .pass_shoe import solve as solvePassShoe
 from .two_robots_stack_cube import solve as solveTwoRobotsStackCube
 from .two_robots_stack_cube_active import solve as solveTwoRobotsStackCubeActive
+from .two_robots_handover_active import solve as solveTwoRobotsHandoverActive
+from .two_robots_handover_active_A import solve as solveTwoRobotsHandoverActiveA
+from .two_robots_handover_active_B import solve as solveTwoRobotsHandoverActiveB
+from .two_robots_handover_active_C import solve as solveTwoRobotsHandoverActiveC
 from .three_robots_stack_cube import solve as solveThreeRobotsStackCube
 from .lift_barrier import solve as solveLiftBarrier
 from .take_photo import solve as solveTakePhoto

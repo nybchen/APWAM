@@ -48,6 +48,7 @@ class ManiSkillTrajectoryDataset(Dataset):
 
         self.obs = []
         self.actions = []
+        self.mode_labels = []
         self.terminated = []
         self.truncated = []
         self.success, self.fail, self.rewards = None, None, None
@@ -71,6 +72,10 @@ class ManiSkillTrajectoryDataset(Dataset):
             self.obs = common.append_dict_array(self.obs, [obs])
 
             self.actions.append(trajectory["actions"])
+            if "mode_labels" in trajectory:
+                self.mode_labels.append(trajectory["mode_labels"])
+            else:
+                self.mode_labels.append(np.ones((eps_len,), dtype=np.int8))
             self.terminated.append(trajectory["terminated"])
             self.truncated.append(trajectory["truncated"])
 
@@ -146,6 +151,7 @@ class ManiSkillTrajectoryDataset(Dataset):
             action=action,
             terminated=self.terminated[idx],
             truncated=self.truncated[idx],
+            mode_label=self.mode_labels[idx],
         )
         if self.rewards is not None:
             res.update(reward=self.rewards[idx])
@@ -185,6 +191,7 @@ def main(load_num, task_name):
                 joint_action=res["action"][j],
                 endpose=res["action"][j],
                 observation=obs_dict,
+                mode_label=int(res["mode_label"][j]),
             )
             with open(f"{episode_dir}/{j}.pkl", "wb") as f:
                 pickle.dump(step_data, f)

@@ -34,7 +34,7 @@ def main():
     zarr_meta = zarr_root.create_group('meta')
 
     head_camera_arrays, front_camera_arrays, left_camera_arrays, right_camera_arrays = [], [], [], []
-    episode_ends_arrays, action_arrays, state_arrays, joint_action_arrays = [], [], [], []
+    episode_ends_arrays, action_arrays, state_arrays, joint_action_arrays, mode_label_arrays = [], [], [], [], []
     
     while os.path.isdir(load_dir+f'/episode{current_ep}') and current_ep < num:
         print(f'processing episode: {current_ep + 1} / {num}', end='\r')
@@ -50,6 +50,7 @@ def main():
             # right_img = data['observation']['right_camera']['rgb']
             action = data['endpose']
             joint_action = data['joint_action']
+            mode_label = data.get('mode_label', 1)
 
             head_camera_arrays.append(head_img)
             # front_camera_arrays.append(front_img)
@@ -58,6 +59,7 @@ def main():
             action_arrays.append(action)
             state_arrays.append(joint_action)
             joint_action_arrays.append(joint_action)
+            mode_label_arrays.append(mode_label)
 
             file_num += 1
             total_count += 1
@@ -70,6 +72,7 @@ def main():
     episode_ends_arrays = np.array(episode_ends_arrays)
     action_arrays = np.array(action_arrays)
     state_arrays = np.array(state_arrays)
+    mode_label_arrays = np.array(mode_label_arrays, dtype=np.int8)
     head_camera_arrays = np.array(head_camera_arrays)
     # front_camera_arrays = np.array(front_camera_arrays)
     # left_camera_arrays = np.array(left_camera_arrays)
@@ -94,6 +97,7 @@ def main():
     zarr_data.create_dataset('tcp_action', data=action_arrays, chunks=action_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('state', data=state_arrays, chunks=state_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('action', data=joint_action_arrays, chunks=joint_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('mode_label', data=mode_label_arrays, chunks=(100,), dtype='int8', overwrite=True, compressor=compressor)
     zarr_meta.create_dataset('episode_ends', data=episode_ends_arrays, dtype='int64', overwrite=True, compressor=compressor)
 
 if __name__ == '__main__':

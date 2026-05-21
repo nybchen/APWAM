@@ -52,6 +52,8 @@ def solve(env: PickMeatFromMicrowaveRobocasaEnv, seed=None, debug=False, vis=Fal
     )
     env = env.unwrapped
 
+    planner.set_mode_label("perception", agent_ids=0)
+
     # Robot 1 (door opener) - move to initial pose
     robot1_pose_table = np.array([-0.745552, -0.462443, 0.546143, -0.168495, 0.838735, 0.33362, 0.396019])
     robot1_pose = _map_pose(robot1_pose_table)
@@ -60,7 +62,7 @@ def solve(env: PickMeatFromMicrowaveRobocasaEnv, seed=None, debug=False, vis=Fal
     # Robot 0 (perception) - top-down observation
     robot0_pose_table = np.array([-0.711235, 0.21192, 0.350585, 0.0214251, 0.980529, -0.0695068, 0.182406])
     robot0_pose = _map_pose(robot0_pose_table)
-    planner.move_to_pose_with_screw(robot0_pose, move_id=0)
+    planner.move_to_pose_with_screw(robot0_pose, move_id=0, mode_label="perception")
 
     # Phase 2: Robot 2 opens the microwave door (approach directions flipped for 180°)
     door_handle_grasp_pose = planner.get_grasp_pose_w_labeled_direction(
@@ -91,7 +93,7 @@ def solve(env: PickMeatFromMicrowaveRobocasaEnv, seed=None, debug=False, vis=Fal
     # Robot 2 moves to perception pose
     perception_pose_table = np.array([-0.52402, 0.409508, 0.544259, 0.243583, 0.73186, -0.528351, 0.354816])
     perception_pose = _map_pose(perception_pose_table)
-    planner.move_to_pose_with_screw(perception_pose, move_id=2)
+    planner.move_to_pose_with_screw(perception_pose, move_id=2, mode_label="perception")
 
     # Robot 1 picks the meat (approach directions flipped for 180°)
     grasp_pose = planner.get_grasp_pose_w_labeled_direction(

@@ -11,6 +11,10 @@ from .take_photo import TakePhotoEnv
 from .long_pipeline_delivery import LongPipelineDeliveryEnv
 from .stack_cube_active import StackCubeActiveEnv
 from .two_robots_stack_cube_active import TwoRobotsStackCubeActiveEnv
+from .two_robots_handover_active import TwoRobotsHandoverActiveEnv
+from .two_robots_handover_active_A import TwoRobotsHandoverActiveAEnv
+from .two_robots_handover_active_B import TwoRobotsHandoverActiveBEnv
+from .two_robots_handover_active_C import TwoRobotsHandoverActiveCEnv
 from .place_shoe import PlaceShoeEnv
 from .pick_meat_from_pot import PickMeatFromPotEnv
 from .pick_cube_from_cabinet import PickCubeFromCabinetEnv

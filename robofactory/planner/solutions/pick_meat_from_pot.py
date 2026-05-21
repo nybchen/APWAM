@@ -28,11 +28,13 @@ def solve(env: PickMeatFromPotEnv, seed=None, debug=False, vis=False):
     # === Phase 1: Position perception robot to observe the pot ===
     # Robot 0 moves to observe the pot
     #Pose([-0.00315437, -0.286263, 0.457501], [-0.251162, 0.661668, 0.654008, 0.267184])
+    planner.set_mode_label("perception")
     perception_pose = np.array([-0.00315437, -0.286263, 0.457501, -0.251162, 0.661668, 0.654008, 0.267184])  # Looking down pose
-    planner.move_to_pose_with_screw(perception_pose, move_id=0)
+    planner.move_to_pose_with_screw(perception_pose, move_id=0, mode_label="perception")
     
     # === Phase 2: Robot 1 picks meat and places it in goal region ===
     # Get grasp pose for meat
+    planner.set_mode_label("perception")
     meat_grasp_pose = planner.get_grasp_pose_w_labeled_direction(actor=env.meat, actor_data=env.annotation_data['meat'], pre_dis=0, id=0)
     meat_grasp_pose[2] += 0.05  # Approach from above
     planner.move_to_pose_with_screw(meat_grasp_pose, move_id=1)
@@ -56,4 +58,3 @@ def solve(env: PickMeatFromPotEnv, seed=None, debug=False, vis=False):
     
     
     return res
-

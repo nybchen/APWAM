@@ -32,7 +32,7 @@ def solve(env: PickCubeFromCabinetEnv, seed=None, debug=False, vis=False):
     #Pose([-0.286745, 0, 0.489328], [0.00106629, 0.998201, -0.0134043, 0.0584223])
     #Pose([-0.52402, 0.409508, 0.344259], [0.243583, 0.73186, -0.528351, 0.354816])
     perception_pose = np.array([-0.52402, 0.409508, 0.344259, 0.243583, 0.73186, -0.528351, 0.354816])  # Top-down view
-    planner.move_to_pose_with_screw(perception_pose, move_id=2)
+    planner.move_to_pose_with_screw(perception_pose, move_id=2, mode_label="perception")
     # Robot 1 opens the cabinet
     grasp_pose = planner.get_grasp_pose_w_labeled_direction(actor=env.cabinet, actor_data=env.annotation_data['cabinet'], pre_dis=0, id=0)
     grasp_pose[0] -= 0.05
@@ -58,4 +58,3 @@ def solve(env: PickCubeFromCabinetEnv, seed=None, debug=False, vis=False):
     planner.open_gripper(open_id=[0])
     res = planner.close()
     return res
-

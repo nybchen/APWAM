@@ -30,13 +30,15 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     )
     env = env.unwrapped
     
+    planner.set_mode_label("perception", agent_ids=0)
+
     # TODO: Adjust robot poses for Mode C microwave position [-0.3, 0.3, 0.26]
     # These poses are placeholders and need to be tuned for the new microwave location
     robot1_pose= np.array([-0.745552, -0.462443, 0.546143, -0.168495, 0.838735, 0.33362, 0.396019])
     planner.move_to_pose_with_screw(robot1_pose, move_id=1)
     
     robot0_pose= np.array([-0.579961, -0.25977, 0.632643, -0.0585445, 0.929894, 0.158483, 0.326731])
-    planner.move_to_pose_with_screw(robot0_pose, move_id=0)
+    planner.move_to_pose_with_screw(robot0_pose, move_id=0, mode_label="perception")
     
     # === Phase 2: Robot 2 opens the microwave door ===
     # Get grasp pose for the door handle (id=0 in microwave_annotated/models.py)
@@ -69,7 +71,7 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     
     
     perception_pose = np.array([-0.52402, 0.409508, 0.544259, 0.243583, 0.73186, -0.528351, 0.354816])  # Top-down view
-    planner.move_to_pose_with_screw(perception_pose, move_id=2)
+    planner.move_to_pose_with_screw(perception_pose, move_id=2, mode_label="perception")
       
     
     # Robot 1 picks the meat

@@ -28,10 +28,11 @@ def solve(env: PlaceCubeOnCartEnv, seed=None, debug=False, vis=False):
     # Phase 1: Move perception robot to a good top-down view
     # (these poses are heuristic and may need tuning)
     #Pose([-0.56162, -0.26344, 0.477174], [-0.203068, 0.801166, 0.27616, 0.490543])
+    planner.set_mode_label("perception")
     perception_pose = np.array([-0.56162, -0.26344, 0.477174, -0.203068, 0.801166, 0.27616, 0.490543])
-    planner.move_to_pose_with_screw(perception_pose, move_id=0)
+    planner.move_to_pose_with_screw(perception_pose, move_id=0, mode_label="perception")
 
-
+    planner.set_mode_label("perception")
     grasp_pose = planner.get_grasp_pose_from_obb(env.cube, 0)
     grasp_pose[2] += 0.04
     planner.move_to_pose_with_screw(grasp_pose, move_id=1)
@@ -48,4 +49,3 @@ def solve(env: PlaceCubeOnCartEnv, seed=None, debug=False, vis=False):
     
     res = planner.open_gripper(open_id=[1])
     return res
-

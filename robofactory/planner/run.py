@@ -16,6 +16,12 @@ from .solutions import solvePlaceFood, solveTwoRobotsStackCube, solvePassShoe, s
 from .solutions import solveCameraAlignment, solveThreeRobotsStackCube
 from .solutions import solveTakePhoto, solveLongPipelineDelivery
 from .solutions import solveStackCubeActive, solveTwoRobotsStackCubeActive
+from .solutions import solveTwoRobotsHandoverActive
+from .solutions import (
+    solveTwoRobotsHandoverActiveA,
+    solveTwoRobotsHandoverActiveB,
+    solveTwoRobotsHandoverActiveC,
+)
 from .solutions import solvePlaceShoe
 from .solutions import solvePickMeatFromPot
 from .solutions import solvePickCubeFromCabinet
@@ -36,6 +42,10 @@ MP_SOLUTIONS = {
     "TakePhoto-rf": solveTakePhoto,
     "LongPipelineDelivery-rf": solveLongPipelineDelivery,
     "TwoRobotsStackCubeActive-rf": solveTwoRobotsStackCubeActive,
+    "TwoRobotsHandoverActive-rf": solveTwoRobotsHandoverActive,
+    "TwoRobotsHandoverActiveA-rf": solveTwoRobotsHandoverActiveA,
+    "TwoRobotsHandoverActiveB-rf": solveTwoRobotsHandoverActiveB,
+    "TwoRobotsHandoverActiveC-rf": solveTwoRobotsHandoverActiveC,
     "PlaceShoe-rf": solvePlaceShoe,
     "PickMeatFromPot-rf": solvePickMeatFromPot,
     "PickCubeFromCabinet-rf": solvePickCubeFromCabinet,
@@ -53,6 +63,7 @@ def parse_args(args=None):
     parser.add_argument("--only-count-success", action="store_true", help="If true, generates trajectories until num_traj of them are successful and only saves the successful trajectories/videos")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-b", "--sim-backend", type=str, default="cpu", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
+    parser.add_argument("--render-backend", type=str, default="cpu", help="Which render backend to use. Use 'cpu' for headless llvmpipe rendering or 'gpu' for CUDA rendering.")
     parser.add_argument("--render-mode", type=str, default="rgb_array", help="can be 'sensors' or 'rgb_array' which only affect what is saved to videos")
     parser.add_argument("--vis", default=False, action="store_true", help="whether or not to open a GUI to visualize the solution live")
     parser.add_argument("--save-video", action="store_true", help="whether or not to save videos locally")
@@ -80,6 +91,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
         sim_backend=args.sim_backend,
+        render_backend=args.render_backend,
     )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")

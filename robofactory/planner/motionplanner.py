@@ -69,6 +69,16 @@ class PandaArmMotionPlanningSolver:
         self.collision_pts_changed = False
         self.all_collision_pts = None
 
+    def set_mode_label(self, mode_label: str, agent_ids=None):
+        if hasattr(self.env, "set_action_mode_label"):
+            self.env.set_action_mode_label(mode_label, agent_ids=agent_ids)
+            return
+        if hasattr(self.env, "get_wrapper_attr"):
+            try:
+                self.env.get_wrapper_attr("set_action_mode_label")(mode_label, agent_ids=agent_ids)
+            except AttributeError:
+                pass
+
     def render_wait(self):
         if not self.vis or not self.debug:
             return
@@ -98,7 +108,8 @@ class PandaArmMotionPlanningSolver:
             planner_group.append(planner)
         return planner_group
                     
-    def follow_path(self, result_group, move_id, refine_steps: int = 0):
+    def follow_path(self, result_group, move_id, refine_steps: int = 0, mode_label: str = "action"):
+        self.set_mode_label(mode_label, agent_ids=move_id)
         n_step = 0
         for i in range(len(result_group)):
             n_step = max(n_step, result_group[i]["position"].shape[0])
@@ -146,7 +157,7 @@ class PandaArmMotionPlanningSolver:
         return True, obs, reward, terminated, truncated, info
 
     def move_to_pose_with_screw(
-        self, pose: Union[Any, List[Any]], dry_run: bool = False, refine_steps: int = 0, move_id : Union[int, List[int]] = 0, jump: int = 1
+        self, pose: Union[Any, List[Any]], dry_run: bool = False, refine_steps: int = 0, move_id : Union[int, List[int]] = 0, jump: int = 1, mode_label: str = "action"
     ):
         pose = [pose, ] if not isinstance(pose, list) else pose
         pose = [to_sapien_pose(p) for p in pose]
@@ -185,10 +196,11 @@ class PandaArmMotionPlanningSolver:
             if dry_run:
                 return result
             result_group.append(result)
-        return self.follow_path(result_group, move_id, refine_steps=refine_steps)
+        return self.follow_path(result_group, move_id, refine_steps=refine_steps, mode_label=mode_label)
     
-    def open_gripper(self, open_id: Union[int, List[int]] = 0):
+    def open_gripper(self, open_id: Union[int, List[int]] = 0, mode_label: str = "action"):
         open_id = [open_id, ] if not isinstance(open_id, list) else open_id
+        self.set_mode_label(mode_label, agent_ids=open_id)
         for i in range(20):
             if not self.is_multi_agent:
                 self.gripper_state[0] = min(self.gripper_state[0] + 0.1, OPEN)
@@ -220,8 +232,9 @@ class PandaArmMotionPlanningSolver:
                 self.base_env.render_human()
         return obs, reward, terminated, truncated, info
 
-    def close_gripper(self, close_id: Union[int, List[int]] = 0):
+    def close_gripper(self, close_id: Union[int, List[int]] = 0, mode_label: str = "action"):
         close_id = [close_id, ] if not isinstance(close_id, list) else close_id
+        self.set_mode_label(mode_label, agent_ids=close_id)
         # use step-by-step close
         for i in range(20):
             if not self.is_multi_agent:

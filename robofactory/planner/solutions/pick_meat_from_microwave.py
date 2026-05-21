@@ -9,10 +9,10 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     """
     Motion planning solution for picking meat from microwave with active perception.
     
-    Three robots coordination:
-    - Robot 0 (perception): Moves to observe the scene from top
-    - Robot 1 (door opener): Opens the microwave door by pulling the handle
-    - Robot 2 (picker): Picks the meat from the microwave and places it in the goal region
+    Three robots coordination in this scripted trajectory:
+    - Robot 0 observes the scene.
+    - Robot 2 opens the microwave door by pulling the handle.
+    - Robot 1 picks the meat and places it in the goal region.
     """
     env.reset(seed=seed)
     planner = PandaArmMotionPlanningSolver(
@@ -26,15 +26,21 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     )
     env = env.unwrapped
     
+    # Segment 1: perception / setup. These camera-placement motions are not
+    # object manipulation, so all arms stay labeled as perception.
+    planner.set_mode_label("perception")
 
     robot1_pose= np.array([-0.745552, -0.462443, 0.546143, -0.168495, 0.838735, 0.33362, 0.396019])
-    planner.move_to_pose_with_screw(robot1_pose, move_id=1)
+    planner.move_to_pose_with_screw(robot1_pose, move_id=1, mode_label="perception")
     
     # PPose([Pose([-0.711235, 0.21192, 0.350585], [0.0214251, 0.980529, -0.0695068, 0.182406])
+    planner.set_mode_label("perception")
     robot0_pose= np.array([-0.711235, 0.21192, 0.350585, 0.0214251, 0.980529, -0.0695068, 0.182406])
-    planner.move_to_pose_with_screw(robot0_pose, move_id=0)
+    planner.move_to_pose_with_screw(robot0_pose, move_id=0, mode_label="perception")
     
-    # === Phase 2: Robot 2 opens the microwave door ===
+    # Segment 2: robot 2 opens the microwave door. Robot 0 and robot 1 are
+    # perception-only throughout this manipulation.
+    planner.set_mode_label("perception")
     # Get grasp pose for the door handle (id=0 in microwave_annotated/models.py)
     door_handle_grasp_pose = planner.get_grasp_pose_w_labeled_direction(
         actor=env.microwave, 
@@ -64,12 +70,14 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     planner.move_to_pose_with_screw(pose, move_id=2)
     planner.open_gripper(open_id=[2])
     
-    
+    # Segment 3 starts with robot 2 returning to perception.
+    planner.set_mode_label("perception")
     perception_pose = np.array([-0.52402, 0.409508, 0.544259, 0.243583, 0.73186, -0.528351, 0.354816])  # Top-down view
-    planner.move_to_pose_with_screw(perception_pose, move_id=2)
+    planner.move_to_pose_with_screw(perception_pose, move_id=2, mode_label="perception")
       
     
-    # Robot 1 picks the meat
+    # Robot 1 picks the meat. Robot 0 and robot 2 are perception-only.
+    planner.set_mode_label("perception")
     
     
     grasp_pose = planner.get_grasp_pose_w_labeled_direction(actor=env.meat, actor_data=env.annotation_data['meat'], pre_dis=0, id=2)
@@ -87,4 +95,3 @@ def solve(env: PickMeatFromMicrowaveEnv, seed=None, debug=False, vis=False):
     res = planner.open_gripper(open_id=[1])
     
     return res
-

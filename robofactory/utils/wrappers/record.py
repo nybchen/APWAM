@@ -24,6 +24,12 @@ class RecordEpisodeMA(RecordEpisode):
     """Record trajectories or videos for episodes. Support multi-agent environments.
     
     """
+    MODE_LABELS = {
+        "perception": 0,
+        "action": 1,
+    }
+    MODE_LABEL_NAMES = ("perception", "action")
+
     def __init__(
         self,
         env: BaseEnv,
@@ -66,11 +72,61 @@ class RecordEpisodeMA(RecordEpisode):
 
         self.record_observation = record_observation
         self.record_simple_observation = record_simple_observation
+        if hasattr(self.base_env.agent, "agents"):
+            self._mode_label_agent_num = len(self.base_env.agent.agents)
+        else:
+            self._mode_label_agent_num = 1
+        self._current_mode_labels = np.full(
+            (self._mode_label_agent_num,), self.MODE_LABELS["perception"], dtype=np.int8
+        )
+        self._mode_label_buffer = None
         
         if info_on_video and self.num_envs > 1:
             raise ValueError(
                 "Cannot turn info_on_video=True when the number of environments parallelized is > 1"
             )
+
+    @property
+    def agent(self):
+        return self.base_env.agent
+
+    def _parse_mode_label(self, mode: Union[str, int]) -> int:
+        if isinstance(mode, str):
+            if mode not in self.MODE_LABELS:
+                raise ValueError(
+                    f"Unknown mode label {mode!r}. Expected one of {list(self.MODE_LABELS.keys())}"
+                )
+            mode = self.MODE_LABELS[mode]
+        if int(mode) not in self.MODE_LABELS.values():
+            raise ValueError(f"Unknown mode label id {mode!r}")
+        return int(mode)
+
+    def set_mode_label(
+        self, mode: Union[str, int], agent_ids: Optional[Union[int, List[int]]] = None
+    ) -> None:
+        mode = self._parse_mode_label(mode)
+        if agent_ids is None:
+            self._current_mode_labels[:] = mode
+            return
+        if isinstance(agent_ids, int):
+            agent_ids = [agent_ids]
+        for agent_id in agent_ids:
+            self._current_mode_labels[int(agent_id)] = mode
+
+    def set_action_mode_label(
+        self, mode: Union[str, int], agent_ids: Optional[Union[int, List[int]]] = None
+    ) -> None:
+        self.set_mode_label(mode, agent_ids=agent_ids)
+
+    def step(self, *args, **kwargs):
+        out = super().step(*args, **kwargs)
+        if self.save_trajectory and self._mode_label_buffer is not None:
+            label = np.broadcast_to(
+                self._current_mode_labels.reshape(1, 1, self._mode_label_agent_num),
+                (1, self.num_envs, self._mode_label_agent_num),
+            ).copy()
+            self._mode_label_buffer = np.concatenate([self._mode_label_buffer, label], axis=0)
+        return out
 
     def reset(
         self,
@@ -146,6 +202,9 @@ class RecordEpisodeMA(RecordEpisode):
                 env_idx = common.to_numpy(options["env_idx"])
             # Initialize trajectory buffer on the first episode based on given observation (which should be generated after all wrappers)
             self._trajectory_buffer = first_step
+            self._mode_label_buffer = np.full(
+                (1, self.num_envs, self._mode_label_agent_num), -1, dtype=np.int8
+            )
         if options is not None and "env_idx" in options:
             options["env_idx"] = common.to_numpy(options["env_idx"])
         self.last_reset_kwargs = copy.deepcopy(dict(options=options, **kwargs))
@@ -283,6 +342,24 @@ class RecordEpisodeMA(RecordEpisode):
                     recursive_add_to_h5py(group, actions, "actions")
                 else:
                     group.create_dataset("actions", data=actions, dtype=np.float32)
+                if self._mode_label_buffer is not None:
+                    mode_labels = self._mode_label_buffer[start_ptr + 1 : end_ptr, env_idx]
+                    if isinstance(self._trajectory_buffer.action, dict):
+                        label_group = group.create_group("mode_labels", track_order=True)
+                        for agent_idx, agent_id in enumerate(actions.keys()):
+                            label_group.create_dataset(
+                                agent_id,
+                                data=mode_labels[:, agent_idx],
+                                dtype=np.int8,
+                            )
+                        label_group.attrs["label_names"] = np.asarray(self.MODE_LABEL_NAMES, dtype="S")
+                    else:
+                        dset = group.create_dataset(
+                            "mode_labels",
+                            data=mode_labels[:, 0],
+                            dtype=np.int8,
+                        )
+                        dset.attrs["label_names"] = np.asarray(self.MODE_LABEL_NAMES, dtype="S")
                 group.create_dataset("terminated", data=terminated, dtype=bool)
                 group.create_dataset("truncated", data=truncated, dtype=bool)
 
@@ -371,6 +448,8 @@ class RecordEpisodeMA(RecordEpisode):
                 self._trajectory_buffer.fail = common.index_dict_array(
                     self._trajectory_buffer.fail, slice(min_env_ptr, N)
                 )
+            if self._mode_label_buffer is not None:
+                self._mode_label_buffer = self._mode_label_buffer[min_env_ptr:N]
             self._trajectory_buffer.env_episode_ptr -= min_env_ptr
 
     def flush_video(

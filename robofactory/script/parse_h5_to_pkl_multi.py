@@ -22,6 +22,11 @@ def load_h5_data(data):
             out[k] = load_h5_data(data[k])
     return out
 
+def get_mode_label_for_agent(mode_labels, agent_key, step_idx):
+    if isinstance(mode_labels, dict):
+        return int(mode_labels[agent_key][step_idx])
+    return int(mode_labels[step_idx])
+
 class ManiSkillTrajectoryDataset(Dataset):
     """
     A general torch Dataset you can drop in and use immediately with just about any trajectory .h5 data generated from ManiSkill.
@@ -48,6 +53,7 @@ class ManiSkillTrajectoryDataset(Dataset):
 
         self.obs = []
         self.actions = []
+        self.mode_labels = []
         self.terminated = []
         self.truncated = []
         self.success, self.fail, self.rewards = None, None, None
@@ -66,13 +72,18 @@ class ManiSkillTrajectoryDataset(Dataset):
             trajectory = load_h5_data(trajectory)
 
             # bad code!!! but useful now
-            eps_len = len(trajectory["actions"]['panda-0'])
+            first_action_key = next(iter(trajectory["actions"].keys()))
+            eps_len = len(trajectory["actions"][first_action_key])
 
             # exclude the final observation as most learning workflows do not use it
             obs = common.index_dict_array(trajectory["obs"], slice(eps_len))
             self.obs = common.append_dict_array(self.obs, [obs])
 
             self.actions.append(trajectory["actions"])
+            if "mode_labels" in trajectory:
+                self.mode_labels.append(trajectory["mode_labels"])
+            else:
+                self.mode_labels.append(np.ones((eps_len,), dtype=np.int8))
             self.terminated.append(trajectory["terminated"])
             self.truncated.append(trajectory["truncated"])
 
@@ -146,6 +157,7 @@ class ManiSkillTrajectoryDataset(Dataset):
             action=action,
             terminated=self.terminated[idx],
             truncated=self.truncated[idx],
+            mode_label=self.mode_labels[idx],
         )
         if self.rewards is not None:
             res.update(reward=self.rewards[idx])
@@ -177,11 +189,12 @@ def main(load_num, task_name, agent_num):
             # for every episode, make a dir to save the episode data
             episode_dir = f"{base_dir}/episode{i}"
             os.makedirs(episode_dir, exist_ok=True)
-            if (len(res["action"]["panda-0"]) != len(res["obs"]["sensor_data"][camera_name]["rgb"])):
+            first_action_key = next(iter(res["action"].keys()))
+            if (len(res["action"][first_action_key]) != len(res["obs"]["sensor_data"][camera_name]["rgb"])):
                 print("action length not equal to obs length")
-                print("action length", len(res["action"]["panda-0"]))
+                print("action length", len(res["action"][first_action_key]))
                 print("obs length", len(res["obs"]["sensor_data"][camera_name]["rgb"]))
-            min_len = min(len(res["action"]["panda-0"]), len(res["obs"]["sensor_data"][camera_name]["rgb"]))
+            min_len = min(len(res["action"][first_action_key]), len(res["obs"]["sensor_data"][camera_name]["rgb"]))
             for j in range(min_len):
                 obs_dict = {}
                 obs_dict["head_camera"] = {}
@@ -195,13 +208,18 @@ def main(load_num, task_name, agent_num):
                         joint_action=None,
                         endpose=None,
                         observation=obs_dict,
+                        mode_label={
+                            key: int(value[j]) for key, value in res["mode_label"].items()
+                        } if isinstance(res["mode_label"], dict) else int(res["mode_label"][j]),
                     )
                 else:
+                    agent_key = f"panda_wristcam-{agent_id}"
                     step_data = dict(
                         pointcloud=None,
-                        joint_action=res["action"][f'panda-{agent_id}'][j],
-                        endpose=res["action"][f'panda-{agent_id}'][j],
+                        joint_action=res["action"][agent_key][j],
+                        endpose=res["action"][agent_key][j],
                         observation=obs_dict,
+                        mode_label=get_mode_label_for_agent(res["mode_label"], agent_key, j),
                     )
                 with open(f"{episode_dir}/{j}.pkl", "wb") as f:
                     pickle.dump(step_data, f)
