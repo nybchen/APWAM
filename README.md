@@ -1,11 +1,14 @@
 # Multi Agent Active Perception (MAAP)
 
-## Four table tasks
+## Seven table tasks
 
 | Task | Config | Description |
 |------|--------|-------------|
 | **PlaceCubeOnCart** | `configs/table/place_cube_on_cart.yaml` | Two robots: one observes, one places cube on cart. |
 | **TwoRobotsStackCubeActive** | `configs/table/two_robots_stack_cube_active.yaml` | Two robots stack two cubes with active perception. |
+| **TwoRobotsHandoverActiveA** | `configs/table/two_robots_handover_active_A.yaml` | Two robots: agent 0 hands a cube to agent 1, then agent 1 places it in the right goal region. |
+| **TwoRobotsHandoverActiveB** | `configs/table/two_robots_handover_active_B.yaml` | Two robots: agent 1 hands a cube to agent 0, then agent 0 places it in the left goal region. |
+| **TwoRobotsHandoverActiveC** | `configs/table/two_robots_handover_active_C.yaml` | Two robots: mixed-direction handover with active perception. |
 | **PickMeatFromPot** | `configs/table/pick_meat_from_pot.yaml` | Two robots: one observes, one picks meat from pot to goal. |
 | **PickMeatFromMicrowave** | `configs/table/pick_meat_from_microwave.yaml` | Three robots: observe, open door, pick meat to goal. |
 
@@ -23,6 +26,9 @@ Other tasks:
 
 ```bash
 python script/run_task.py configs/table/two_robots_stack_cube_active.yaml
+python script/run_task.py configs/table/two_robots_handover_active_A.yaml
+python script/run_task.py configs/table/two_robots_handover_active_B.yaml
+python script/run_task.py configs/table/two_robots_handover_active_C.yaml
 python script/run_task.py configs/table/pick_meat_from_pot.yaml
 python script/run_task.py configs/table/pick_meat_from_microwave.yaml
 ```
@@ -31,7 +37,26 @@ python script/run_task.py configs/table/pick_meat_from_microwave.yaml
 
 ## Generate data (motion-planning demos)
 
-From `robofactory/`:
+Use the `robofactory` conda environment and run commands from `robofactory/`:
+
+```bash
+conda activate robofactory
+cd ~/bruno/APWAM/robofactory
+```
+
+Generate one labeled trajectory for each MAAP table task:
+
+```bash
+python script/generate_data.py --config configs/table/place_cube_on_cart.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/two_robots_stack_cube_active.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/two_robots_handover_active_A.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/two_robots_handover_active_B.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/two_robots_handover_active_C.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/pick_meat_from_pot.yaml --num 1 --save-video
+python script/generate_data.py --config configs/table/pick_meat_from_microwave.yaml --num 1 --save-video
+```
+
+Single-task example:
 
 ```bash
 python script/generate_data.py --config configs/table/place_cube_on_cart.yaml --num 1 --save-video
@@ -39,6 +64,7 @@ python script/generate_data.py --config configs/table/place_cube_on_cart.yaml --
 
 - `--num N`: number of successful trajectories to record.
 - `--save-video`: save videos of each trajectory.
+- The generated h5 trajectories include per-frame, per-agent `mode_labels/panda-*` where `0=perception` and `1=action`.
 
 Example for more trajectories:
 
@@ -46,7 +72,7 @@ Example for more trajectories:
 python script/generate_data.py --config configs/table/place_cube_on_cart.yaml --num 100 --save-video
 ```
 
-Same pattern for the other three tasks (replace the config path).
+Use the same seven config paths above when scaling to more trajectories.
 
 **Generate data for DP3 (pointcloud):**
 
@@ -74,7 +100,7 @@ python script/image/extract.py --dataset_path={dataset_path} --output_path={outp
 - `--dataset_path`: path to the source `.h5` from robofactory (e.g. `../robofactory/demos/PlaceCubeOnCart-rf/motionplanning/20250101_120000.h5`).
 - `--output_path`: path for the output `.h5` (e.g. `data/place_cube_on_cart.h5`).
 - `--load_num`: number of trajectories to load (use `50` or `-1` for all).
-- `--agent_num`: number of agents (`2` for PlaceCubeOnCart, TwoRobotsStackCubeActive, PickMeatFromPot; `3` for PickMeatFromMicrowave).
+- `--agent_num`: number of agents (`2` for PlaceCubeOnCart, TwoRobotsStackCubeActive, TwoRobotsHandoverActiveA/B/C, PickMeatFromPot; `3` for PickMeatFromMicrowave).
 
 Example (2 agents, 50 trajs):
 
@@ -96,7 +122,7 @@ python script/pointcloud/extract.py \
 - `--dataset_path`: path to the source `.h5` from robofactory (use the merged `.h5` next to the `.json`).
 - `--output_path`: path for the output `.h5` (e.g. `data/place_cube_on_cart_pointcloud.h5`).
 - `--load_num`: number of trajectories (`-1` for all).
-- `--agent_num`: number of agents (`2` for PlaceCubeOnCart, PickMeatFromPot; `3` for PickMeatFromMicrowave).
+- `--agent_num`: number of agents (`2` for PlaceCubeOnCart, TwoRobotsStackCubeActive, TwoRobotsHandoverActiveA/B/C, PickMeatFromPot; `3` for PickMeatFromMicrowave).
 - `--point_num`: points per cloud (default `512`).
 
 ---
