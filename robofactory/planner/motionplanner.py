@@ -109,19 +109,35 @@ class PandaArmMotionPlanningSolver:
         return planner_group
                     
     def follow_path(self, result_group, move_id, refine_steps: int = 0, mode_label: str = "action"):
-        self.set_mode_label(mode_label, agent_ids=move_id)
+        if isinstance(mode_label, (list, tuple)):
+            if len(mode_label) != len(move_id):
+                raise ValueError("mode_label list must match move_id length")
+            for one_mode, one_id in zip(mode_label, move_id):
+                self.set_mode_label(one_mode, agent_ids=one_id)
+        else:
+            self.set_mode_label(mode_label, agent_ids=move_id)
         n_step = 0
         for i in range(len(result_group)):
-            n_step = max(n_step, result_group[i]["position"].shape[0])
+            path_step = result_group[i]["position"].shape[0]
+            n_step = max(n_step, path_step)
+        if n_step <= 0:
+            n_step = 1
         # Multi-Agent check collision
         # if check_collision(self, result_group, move_id, n_step, jump):
         #     print("Collision detected")
         #     return False
         for i in range(n_step + refine_steps):
             if not self.is_multi_agent:
-                qpos = result_group[0]["position"][min(i, n_step - 1)]
+                self_step = result_group[0]["position"].shape[0]
+                if self_step <= 0:
+                    qpos = self.robot[0].get_qpos()[0, :-2].cpu().numpy()
+                else:
+                    qpos = result_group[0]["position"][min(i, self_step - 1)]
                 if self.control_mode == "pd_joint_pos_vel":
-                    qvel = result_group[0]["velocity"][min(i, n_step - 1)]
+                    if self_step <= 0:
+                        qvel = qpos * 0
+                    else:
+                        qvel = result_group[0]["velocity"][min(i, self_step - 1)]
                     action = np.hstack([qpos, qvel, self.gripper_state])
                 else:
                     action = np.hstack([qpos, self.gripper_state])
@@ -139,9 +155,15 @@ class PandaArmMotionPlanningSolver:
                     else:
                         move_idx = move_id.index(id)
                         self_step = result_group[move_idx]["position"].shape[0]
-                        qpos = result_group[move_idx]["position"][min(i, self_step - 1)]
+                        if self_step <= 0:
+                            qpos = self.robot[id].get_qpos()[0, :-2].cpu().numpy()
+                        else:
+                            qpos = result_group[move_idx]["position"][min(i, self_step - 1)]
                         if self.control_mode == "pd_joint_pos_vel":
-                            qvel = result_group[move_idx]["velocity"][min(i, self_step - 1)]
+                            if self_step <= 0:
+                                qvel = qpos * 0
+                            else:
+                                qvel = result_group[move_idx]["velocity"][min(i, self_step - 1)]
                             action = np.hstack([qpos, qvel, self.gripper_state[id]])
                         else:
                             action = np.hstack([qpos, self.gripper_state[id]])
@@ -153,7 +175,9 @@ class PandaArmMotionPlanningSolver:
                     f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
                 )
             if self.vis:
-                self.base_env.render_human()
+                viewer = self.base_env.render_human()
+                if viewer is None or getattr(viewer, "window", None) is None:
+                    self.vis = False
         return True, obs, reward, terminated, truncated, info
 
     def move_to_pose_with_screw(

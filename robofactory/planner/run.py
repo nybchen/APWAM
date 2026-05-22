@@ -151,13 +151,21 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             if args.save_video or args.save_per_camera_video:
                 env.flush_video(split=False, split_width=3840)
             pbar.update(1)
+            if solution_episode_lengths:
+                avg_episode_length = np.mean(solution_episode_lengths)
+                max_episode_length = np.max(solution_episode_lengths)
+                min_episode_length = np.min(solution_episode_lengths)
+            else:
+                avg_episode_length = np.nan
+                max_episode_length = np.nan
+                min_episode_length = np.nan
             pbar.set_postfix(
                 dict(
                     success_rate=np.mean(successes),
                     failed_motion_plan_rate=failed_motion_plans / (seed + 1),
-                    avg_episode_length=np.mean(solution_episode_lengths),
-                    max_episode_length=np.max(solution_episode_lengths),
-                    min_episode_length=np.min(solution_episode_lengths)
+                    avg_episode_length=avg_episode_length,
+                    max_episode_length=max_episode_length,
+                    min_episode_length=min_episode_length
                 )
             )
             seed += 1
