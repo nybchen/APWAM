@@ -158,6 +158,17 @@ class TwoRobotsHandoverActiveEnv(BaseEnv):
 
         cube_pose = self.cube.pose
         cube_pose.p[:, :2] = source_goal.pose.p[:, :2]
+        cube_xy_noise = self.cfg.get("task", {}).get("cube_xy_noise", [0.0, 0.0])
+        if isinstance(cube_xy_noise, (int, float)):
+            cube_xy_noise = [float(cube_xy_noise), float(cube_xy_noise)]
+        cube_xy_noise = torch.as_tensor(
+            cube_xy_noise, device=self.device, dtype=cube_pose.p.dtype
+        )
+        if torch.any(cube_xy_noise > 0):
+            xy_offset = (
+                torch.rand(cube_pose.p[:, :2].shape, device=self.device) * 2.0 - 1.0
+            ) * cube_xy_noise
+            cube_pose.p[:, :2] += xy_offset
         cube_pose.p[:, 2] = self.cube_half_size_value
         self.cube.set_pose(cube_pose)
         cube_mass = self.cfg.get("task", {}).get("cube_mass")

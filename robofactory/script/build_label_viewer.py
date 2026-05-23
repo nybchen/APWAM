@@ -11,6 +11,16 @@ LABEL_NAMES = {
 }
 
 
+def _task_name_from_h5_path(record_dir, h5_path):
+    rel_parts = h5_path.relative_to(record_dir).parts
+    if "motionplanning" not in rel_parts:
+        return h5_path.parents[1].name
+    motion_idx = rel_parts.index("motionplanning")
+    if motion_idx <= 0:
+        return h5_path.parents[1].name
+    return rel_parts[motion_idx - 1]
+
+
 def _sorted_traj_keys(h5_file):
     keys = [k for k in h5_file.keys() if k.startswith("traj_")]
     return sorted(keys, key=lambda k: int(k.split("_", 1)[1]))
@@ -42,18 +52,37 @@ def build_manifest(
 ):
     demos = []
     skipped_unlabeled = 0
-    h5_paths = sorted(record_dir.glob("*/motionplanning/*.h5"))
+    skipped_broken = 0
+    h5_paths = sorted(record_dir.glob("*/motionplanning/**/*.h5"))
     if not include_history:
         latest_by_task = {}
         for h5_path in h5_paths:
-            task_name = h5_path.parents[1].name
+            task_name = _task_name_from_h5_path(record_dir, h5_path)
             if task_name not in latest_by_task or h5_path.stat().st_mtime > latest_by_task[task_name].stat().st_mtime:
                 latest_by_task[task_name] = h5_path
         h5_paths = sorted(latest_by_task.values())
     for h5_path in h5_paths:
-        task_name = h5_path.parents[1].name
+        task_name = _task_name_from_h5_path(record_dir, h5_path)
         motion_dir = h5_path.parent
-        with h5py.File(h5_path, "r") as h5_file:
+        episode_meta = {}
+        json_path = h5_path.with_suffix(".json")
+        if json_path.exists():
+            try:
+                metadata = json.loads(json_path.read_text(encoding="utf-8"))
+                episode_meta = {
+                    int(ep["episode_id"]): ep
+                    for ep in metadata.get("episodes", [])
+                    if "episode_id" in ep
+                }
+            except (json.JSONDecodeError, OSError, ValueError):
+                episode_meta = {}
+        try:
+            h5_file = h5py.File(h5_path, "r")
+        except OSError as exc:
+            skipped_broken += 1
+            print(f"Skipping unreadable h5 {h5_path}: {exc}")
+            continue
+        with h5_file:
             for traj_key in _sorted_traj_keys(h5_file):
                 traj_id = int(traj_key.split("_", 1)[1])
                 traj_group = h5_file[traj_key]
@@ -75,16 +104,30 @@ def build_manifest(
                         labels = {"global": [1] * _action_len(traj_group["actions"])}
                 else:
                     labels = _read_labels(traj_group)
-                video_path = motion_dir / f"{traj_id}.mp4"
-                if not video_path.exists():
+                video_candidates = [
+                    motion_dir / f"{h5_path.stem}_traj_{traj_id}.mp4",
+                    motion_dir / f"{traj_id}.mp4",
+                ]
+                video_path = next((path for path in video_candidates if path.exists()), None)
+                if video_path is None:
                     continue
                 rel_video = Path("..") / video_path.relative_to(output_dir.parent)
+                h5_rel_to_record = h5_path.relative_to(record_dir)
+                video_rel_to_record = video_path.relative_to(record_dir)
+                meta = episode_meta.get(traj_id, {})
                 demos.append(
                     {
+                        "id": f"{task_name}/{h5_path.stem}/traj_{traj_id}",
                         "task": task_name,
+                        "demoFile": h5_path.stem,
                         "traj": traj_id,
+                        "seed": meta.get("episode_seed"),
+                        "success": meta.get("success"),
+                        "elapsedSteps": meta.get("elapsed_steps"),
                         "h5": str(h5_path.relative_to(output_dir.parent)),
+                        "h5RelToRecordDir": str(h5_rel_to_record),
                         "video": str(rel_video),
+                        "videoRelToRecordDir": str(video_rel_to_record),
                         "fps": fps,
                         "labelsByAgent": labels,
                         "labelNames": LABEL_NAMES,
@@ -94,7 +137,9 @@ def build_manifest(
     manifest_path = output_dir / "manifest.json"
     manifest = {"demos": demos}
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    return manifest_path, manifest, len(demos), skipped_unlabeled
+    record_manifest_path = record_dir / "label_viewer_manifest.json"
+    record_manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest_path, record_manifest_path, manifest, len(demos), skipped_unlabeled, skipped_broken
 
 
 def write_index(output_dir: Path, manifest: dict):
@@ -143,7 +188,7 @@ def write_index(output_dir: Path, manifest: dict):
     }
     .controls {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) minmax(120px, 180px) auto auto;
+      grid-template-columns: auto auto minmax(180px, 1fr) minmax(180px, 1fr) minmax(120px, 180px) auto auto auto;
       gap: 10px;
       align-items: center;
       margin-bottom: 14px;
@@ -161,6 +206,24 @@ def write_index(output_dir: Path, manifest: dict):
       min-width: 72px;
       padding: 0 12px;
       cursor: pointer;
+    }
+    .folder-button {
+      display: inline-flex;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 0 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .folder-button input { display: none; }
+    .status {
+      margin: -4px 0 14px;
+      color: var(--muted);
+      font-size: 13px;
     }
     .stage {
       background: #111827;
@@ -191,7 +254,7 @@ def write_index(output_dir: Path, manifest: dict):
     .badge.perception { background: var(--perception); }
     .meta {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       margin: 14px 0;
     }
@@ -275,21 +338,32 @@ def write_index(output_dir: Path, manifest: dict):
       <h1>RoboFactory Mode Label Viewer</h1>
     </header>
     <section class="controls">
+      <label class="folder-button">
+        Select Folder
+        <input id="folder" type="file" webkitdirectory directory multiple />
+      </label>
+      <button id="embedded">Built-in</button>
       <select id="task"></select>
+      <select id="demo"></select>
       <select id="traj"></select>
       <button id="play">Play</button>
       <button id="prev">Prev</button>
       <button id="next">Next</button>
     </section>
+    <div id="status" class="status"></div>
     <section id="content"></section>
   </main>
   <script>
     const EMBEDDED_MANIFEST = __MANIFEST_JSON__;
     const labelName = id => id === 0 ? "perception" : "action";
-    const state = { demos: [], demo: null };
+    const state = { demos: [], demo: null, objectUrls: [] };
     const taskSelect = document.querySelector("#task");
+    const demoSelect = document.querySelector("#demo");
     const trajSelect = document.querySelector("#traj");
     const content = document.querySelector("#content");
+    const status = document.querySelector("#status");
+    const folderInput = document.querySelector("#folder");
+    const embeddedBtn = document.querySelector("#embedded");
     const playBtn = document.querySelector("#play");
     const prevBtn = document.querySelector("#prev");
     const nextBtn = document.querySelector("#next");
@@ -300,20 +374,31 @@ def write_index(output_dir: Path, manifest: dict):
 
     function selectDemo() {
       const task = taskSelect.value;
+      const demoFile = demoSelect.value;
       const traj = Number(trajSelect.value);
-      state.demo = state.demos.find(d => d.task === task && d.traj === traj);
+      state.demo = state.demos.find(d => d.task === task && (d.demoFile || "default") === demoFile && d.traj === traj);
       renderDemo();
     }
 
     function renderSelectors() {
       const tasks = [...new Set(state.demos.map(d => d.task))];
       taskSelect.innerHTML = tasks.map(t => `<option value="${t}">${t}</option>`).join("");
-      function updateTrajOptions() {
-        const demos = state.demos.filter(d => d.task === taskSelect.value);
-        trajSelect.innerHTML = demos.map(d => `<option value="${d.traj}">traj_${d.traj}</option>`).join("");
+      function updateDemoOptions() {
+        const demoFiles = [...new Set(state.demos.filter(d => d.task === taskSelect.value).map(d => d.demoFile || "default"))];
+        demoSelect.innerHTML = demoFiles.map(name => `<option value="${name}">${name}</option>`).join("");
       }
-      taskSelect.onchange = () => { updateTrajOptions(); selectDemo(); };
+      function updateTrajOptions() {
+        const demos = state.demos.filter(d => d.task === taskSelect.value && (d.demoFile || "default") === demoSelect.value);
+        trajSelect.innerHTML = demos.map(d => {
+          const ok = d.success == null ? "" : (d.success ? " success" : " fail");
+          const seed = d.seed == null ? "" : ` seed ${d.seed}`;
+          return `<option value="${d.traj}">traj_${d.traj}${seed}${ok}</option>`;
+        }).join("");
+      }
+      taskSelect.onchange = () => { updateDemoOptions(); updateTrajOptions(); selectDemo(); };
+      demoSelect.onchange = () => { updateTrajOptions(); selectDemo(); };
       trajSelect.onchange = selectDemo;
+      updateDemoOptions();
       updateTrajOptions();
       selectDemo();
     }
@@ -341,7 +426,8 @@ def write_index(output_dir: Path, manifest: dict):
         </div>
         <div class="meta">
           <div class="metric"><span>Task</span><strong>${d.task}</strong></div>
-          <div class="metric"><span>Trajectory</span><strong>traj_${d.traj}</strong></div>
+          <div class="metric"><span>Demo File</span><strong>${d.demoFile || "default"}</strong></div>
+          <div class="metric"><span>Episode</span><strong>traj_${d.traj}</strong></div>
           <div class="metric"><span>Frame</span><strong id="frame">0 / ${Math.max(n - 1, 0)}</strong></div>
           <div class="metric"><span>Arms</span><strong>${agents.join(", ")}</strong></div>
         </div>
@@ -376,9 +462,68 @@ def write_index(output_dir: Path, manifest: dict):
       setFrame(0, false);
     }
 
-    state.demos = EMBEDDED_MANIFEST.demos || [];
-    if (!state.demos.length) renderEmpty("No labeled h5/mp4 pairs found.");
-    else renderSelectors();
+    function normalizePath(path) {
+      return String(path || "").replaceAll("\\\\", "/").replace(/^\\.\\.\\//, "").replace(/^\\.\\//, "");
+    }
+
+    function releaseObjectUrls() {
+      state.objectUrls.forEach(url => URL.revokeObjectURL(url));
+      state.objectUrls = [];
+    }
+
+    function setDemos(demos, message, releaseUrls = true) {
+      if (releaseUrls) releaseObjectUrls();
+      state.demos = [...demos].sort((a, b) =>
+        String(a.task).localeCompare(String(b.task)) ||
+        String(a.demoFile || "").localeCompare(String(b.demoFile || "")) ||
+        Number(a.traj) - Number(b.traj)
+      );
+      status.textContent = message || `${state.demos.length} episodes loaded.`;
+      if (!state.demos.length) renderEmpty("No labeled h5/mp4 pairs found.");
+      else renderSelectors();
+    }
+
+    function findFileBySuffix(files, targetPath) {
+      const target = normalizePath(targetPath);
+      if (!target) return null;
+      return files.find(file => {
+        const path = normalizePath(file.webkitRelativePath || file.name);
+        return path === target || path.endsWith(`/${target}`) || target.endsWith(`/${path}`);
+      }) || null;
+    }
+
+    async function loadFolder(files) {
+      const list = [...files];
+      const manifestFile =
+        list.find(file => /(^|\\/)label_viewer_manifest\\.json$/.test(file.webkitRelativePath || file.name)) ||
+        list.find(file => /(^|\\/)manifest\\.json$/.test(file.webkitRelativePath || file.name));
+      if (!manifestFile) {
+        status.textContent = "No manifest found. Run script/build_label_viewer.py for this demos folder first.";
+        return;
+      }
+      let manifest;
+      try {
+        manifest = JSON.parse(await manifestFile.text());
+      } catch (err) {
+        status.textContent = `Could not read manifest: ${err.message}`;
+        return;
+      }
+      releaseObjectUrls();
+      const demos = (manifest.demos || []).map(demo => {
+        const videoFile =
+          findFileBySuffix(list, demo.videoRelToRecordDir) ||
+          findFileBySuffix(list, demo.video);
+        if (!videoFile) return demo;
+        const video = URL.createObjectURL(videoFile);
+        state.objectUrls.push(video);
+        return { ...demo, video };
+      });
+      setDemos(demos, `Loaded ${demos.length} episodes from ${manifestFile.webkitRelativePath || manifestFile.name}.`, false);
+    }
+
+    folderInput.onchange = event => loadFolder(event.target.files);
+    embeddedBtn.onclick = () => setDemos(EMBEDDED_MANIFEST.demos || [], "Using built-in manifest.");
+    setDemos(EMBEDDED_MANIFEST.demos || [], "Using built-in manifest.");
   </script>
 </body>
 </html>
@@ -393,17 +538,20 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=Path("label_viewer"))
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--include-unlabeled", action="store_true", help="Include old trajectories without mode_labels as all-action.")
-    parser.add_argument("--include-history", action="store_true", help="Include all labeled h5 files instead of only the latest h5 per task.")
+    parser.add_argument("--latest-only", action="store_true", help="Only include the newest h5 file for each task.")
     args = parser.parse_args()
 
-    manifest_path, manifest, count, skipped_unlabeled = build_manifest(
-        args.record_dir, args.output_dir, args.fps, args.include_unlabeled, args.include_history
+    manifest_path, record_manifest_path, manifest, count, skipped_unlabeled, skipped_broken = build_manifest(
+        args.record_dir, args.output_dir, args.fps, args.include_unlabeled, not args.latest_only
     )
     write_index(args.output_dir, manifest)
     print(f"Wrote {args.output_dir / 'index.html'}")
     print(f"Wrote {manifest_path} with {count} trajectories")
+    print(f"Wrote {record_manifest_path}")
     if skipped_unlabeled and not args.include_unlabeled:
         print(f"Skipped {skipped_unlabeled} trajectories without mode_labels")
+    if skipped_broken:
+        print(f"Skipped {skipped_broken} unreadable h5 files")
 
 
 if __name__ == "__main__":

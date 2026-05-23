@@ -101,11 +101,14 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     else:
         new_traj_name = args.traj_name
 
+    run_dir_name = new_traj_name
     if args.num_procs > 1:
         new_traj_name = new_traj_name + "." + str(proc_id)
+        run_dir_name = run_dir_name + "." + str(proc_id)
+    output_dir = osp.join(args.record_dir, env_id, "motionplanning", run_dir_name)
     env = RecordEpisodeMA(
         env,
-        output_dir=osp.join(args.record_dir, env_id, "motionplanning"),
+        output_dir=output_dir,
         trajectory_name=new_traj_name, save_video=args.save_video or args.save_per_camera_video,
         source_type="motionplanning",
         source_desc="motion planning solution from RoboFactory",
@@ -149,7 +152,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         else:
             env.flush_trajectory()
             if args.save_video or args.save_per_camera_video:
-                env.flush_video(split=False, split_width=3840)
+                env.flush_video(name=f"{new_traj_name}_traj_{passed}", split=False, split_width=3840)
             pbar.update(1)
             if solution_episode_lengths:
                 avg_episode_length = np.mean(solution_episode_lengths)

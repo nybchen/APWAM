@@ -64,6 +64,7 @@ python script/generate_data.py --config configs/table/place_cube_on_cart.yaml --
 
 - `--num N`: number of successful trajectories to record.
 - `--save-video`: save videos of each trajectory.
+- Each generation run writes to its own timestamp folder under `demos/<Task-rf>/motionplanning/<timestamp>/`, so new runs do not overwrite older h5/video files.
 - The generated h5 trajectories include per-frame, per-agent `mode_labels/panda-*` where `0=perception` and `1=action`.
 
 Example for more trajectories:
@@ -97,7 +98,7 @@ From `Policy-Lightning-main/`, convert robofactory `.h5` demos into the format e
 python script/image/extract.py --dataset_path={dataset_path} --output_path={output_path} --load_num 50 --agent_num {agent_num}
 ```
 
-- `--dataset_path`: path to the source `.h5` from robofactory (e.g. `../robofactory/demos/PlaceCubeOnCart-rf/motionplanning/20250101_120000.h5`).
+- `--dataset_path`: path to the source `.h5` from robofactory (e.g. `../robofactory/demos/PlaceCubeOnCart-rf/motionplanning/20250101_120000/20250101_120000.h5`).
 - `--output_path`: path for the output `.h5` (e.g. `data/place_cube_on_cart.h5`).
 - `--load_num`: number of trajectories to load (use `50` or `-1` for all).
 - `--agent_num`: number of agents (`2` for PlaceCubeOnCart, TwoRobotsStackCubeActive, TwoRobotsHandoverActiveA/B/C, PickMeatFromPot; `3` for PickMeatFromMicrowave).
@@ -114,12 +115,12 @@ From `Policy-Lightning-main/`, after generating robofactory demos with pointclou
 
 ```bash
 python script/pointcloud/extract.py \
-  --dataset_path ../robofactory/demos/PlaceCubeOnCart-rf/motionplanning/YYYYMMDD_HHMMSS.h5 \
+  --dataset_path ../robofactory/demos/PlaceCubeOnCart-rf/motionplanning/YYYYMMDD_HHMMSS/YYYYMMDD_HHMMSS.h5 \
   --output_path data/place_cube_on_cart_pointcloud.h5 \
   --load_num -1 --agent_num 2 --point_num 512
 ```
 
-- `--dataset_path`: path to the source `.h5` from robofactory (use the merged `.h5` next to the `.json`).
+- `--dataset_path`: path to the source `.h5` from robofactory (use the `.h5` inside the timestamp folder).
 - `--output_path`: path for the output `.h5` (e.g. `data/place_cube_on_cart_pointcloud.h5`).
 - `--load_num`: number of trajectories (`-1` for all).
 - `--agent_num`: number of agents (`2` for PlaceCubeOnCart, TwoRobotsStackCubeActive, TwoRobotsHandoverActiveA/B/C, PickMeatFromPot; `3` for PickMeatFromMicrowave).

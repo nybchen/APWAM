@@ -3,6 +3,7 @@ task_name: TwoRobotsHandoverActiveA
 task:
   direction: left_to_right
   cube_mass: 0.03
+  cube_xy_noise: [0.015, 0.015]
 scene:
   name: Table
   primitives:
@@ -53,10 +54,9 @@ scene:
       pos:
         ppos:
           p: [0.0, -0.28, 0.03]
-        qpos: [1., 0., 0., 0.]
-        randp_scale: [0.04, 0.02, 0.]
+        qpos: [0.96161723, 0., 0., 0.27439457]
+        randp_scale: [0., 0., 0.]
         randq_scale: [0., 0., 0., 0.]
-        random_quaternions: [1, 1, 0]
   assets:
     - name: table
       file_path: ${ASSET_DIR}/scenes/table/table.glb

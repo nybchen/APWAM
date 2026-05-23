@@ -213,9 +213,16 @@ class PandaArmMotionPlanningSolver:
                     use_point_cloud=self.use_point_cloud,
                 )
                 if result["status"] != "Success":
-                    print("Failed to plan screw motion in agent ", id)
-                    self.render_wait()
-                    return -1
+                    result = self.planner[planner_id].plan_qpos_to_pose(
+                        np.concatenate([pose[id].p, pose[id].q]),
+                        self.robot[planner_id].get_qpos().cpu().numpy()[0],
+                        time_step=self.base_env.control_timestep,
+                        use_point_cloud=self.use_point_cloud,
+                    )
+                    if result["status"] != "Success":
+                        print("Failed to plan screw/RRT motion in agent ", id)
+                        self.render_wait()
+                        return -1
             self.render_wait()
             if dry_run:
                 return result
